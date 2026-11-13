@@ -1,0 +1,51 @@
+
+name: PHP Stable Release Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Exact PHP version (optional, e.g. 8.5.11)"
+        required: false
+        type: string
+
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: php-release-import
+  cancel-in-progress: false
+
+jobs:
+  import-release:
+    name: Import PHP release
+    runs-on: ubuntu-latest
+
+    env:
+      PHP_SERIES: "8.5"
+      PHP_VERSION: ${{ inputs.version || '' }}
+
+    steps:
+      - name: Checkout automation branch
+        uses: actions/checkout@v4
+        with:
+          ref: automation-master
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Import verified PHP source
+        run: |
+          python3 scripts/sync-php-releases.py
+
+      - name: Show result
+        run: |
+          echo "PHP release synchronization completed."
