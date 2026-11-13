@@ -1,73 +1,143 @@
+# PHP 8.5 Windows x64 Binary Mirror
 
-# PHP Source Release Mirror
+This repository maintains an automated, versioned mirror of the official PHP
+8.5 Windows x64 binary distributions. It tracks both the Non Thread Safe (NTS)
+and Thread Safe (TS) builds published by the PHP project.
 
-Automated mirror of official PHP stable source releases.
+The `automation-master` branch contains the GitHub Actions workflow,
+synchronization script, and documentation. The binary distributions are kept
+on two independent moving branches, rather than creating a new branch for each
+patch release.
 
-**Upstream:** https://www.php.net/downloads.php  
-**Source repository:** https://github.com/php/php-src
+This is an independent mirror, not an official PHP distribution channel.
 
-## Repository structure
+## Branch structure
 
-The `master` branch contains only:
-- README.md
-- .github/workflows/php-release-sync.yml
-- scripts/sync-php-releases.py
+| Branch | Purpose |
+| --- | --- |
+| `automation-master` | Automation workflow, synchronization script, and README |
+| `php-8.5.X-nts-x64` | Latest PHP 8.5.x Windows x64 NTS binaries |
+| `php-8.5.X-ts-x64` | Latest PHP 8.5.x Windows x64 TS binaries |
 
-Each stable PHP release is stored in its own branch.
+The `X` in each binary branch name is literal. A new branch is not created for
+each patch release.
 
-Example:
-- `php-8.5.11`
-- `php-8.5.12`
-- `php-8.5.13`
+The NTS build is normally appropriate for IIS FastCGI and command-line usage.
+The TS build is intended for environments that require a thread-safe PHP build,
+such as supported web-server module configurations.
 
-## Release synchronization
+## Binary synchronization
 
-GitHub Actions automatically:
+The Windows synchronization workflow runs on a Windows runner and performs the
+following operations:
 
-1. Checks official PHP.net release metadata.
-2. Identifies the latest stable release.
-3. Downloads the official source archive.
-4. Verifies its SHA-256 checksum.
-5. Creates an independent release branch.
-6. Commits the extracted PHP source.
-7. Pushes the new branch to this repository.
+1. Queries the official PHP release API for the latest stable PHP 8.5.x
+   version.
+2. Reads the official
+   [PHP for Windows download page](https://www.php.net/downloads.php?os=windows)
+   and selects the VS17 x64 NTS and TS binary ZIP archives.
+3. Downloads each archive from the official PHP download infrastructure.
+4. Verifies each ZIP against the SHA-256 checksum published alongside that
+   archive before extraction.
+5. Rejects unsafe ZIP paths, removes any upstream **.github** directory, and
+   checks that the extracted distribution contains **php.exe** and **ext**.
+6. Runs **php.exe** smoke tests that validate the PHP version, 64-bit
+   architecture, expected thread-safety mode, basic CLI execution, and JSON
+   encoding and decoding.
+7. Prepares updates in an isolated temporary Git clone and worktrees, leaving
+   the checked-out automation branch unchanged.
+8. Publishes both branch updates with one atomic, non-force push.
 
-Existing release branches are never modified.
+Each binary branch starts with its own orphan history. Later PHP releases append
+normal commits to that branch, preserving the complete upgrade history. If the
+same upstream archive is already recorded, the update is skipped.
 
-## Supported release series
+Every imported release includes a **.php-binary-sync.json** file containing:
 
-Configured in the GitHub Actions workflow.
+- the PHP version;
+- the NTS or TS x64 build variant;
+- the upstream archive name and URL;
+- the verified SHA-256 checksum.
 
-Default: PHP 8.5.x
+The same release identity and build details are also recorded in the Git commit
+message.
 
-## Manual synchronization
+### Scheduled and manual runs
 
-Go to Actions > PHP Stable Release Sync > Run workflow.
+The **PHP Windows x64 Binary Sync** workflow runs on its configured schedule and
+can also be started manually from the repository's Actions page.
 
-You can optionally specify an exact PHP patch version
-to import an older release.
+Manual runs provide a **dry_run** option. A dry run discovers, downloads,
+verifies, extracts, tests, and prepares the current release without pushing any
+branch updates.
 
-## Branch architecture
+## Windows installation
 
-- `master`: automation and documentation
-- `php-X.Y.Z`: official PHP source distribution
+### Clone the NTS distribution
 
-Release branches have independent Git histories.
+The NTS branch is the usual choice for PHP hosted through IIS FastCGI:
 
-## Source and licensing
+~~~powershell
+git clone --single-branch --branch php-8.5.X-nts-x64 `
+  https://github.com/itsshashanksp/php-src.git C:\PHP-Dev
+~~~
 
-PHP source code is maintained by the PHP development team.
+Use the TS branch instead only when the target environment specifically
+requires a thread-safe PHP build.
 
-This repository is an unofficial automated mirror.
-It is not an official PHP distribution channel.
+### Update an existing checkout
 
-PHP source files retain their original licensing terms.
-See the LICENSE file in each release branch.
+~~~powershell
+cd C:\PHP-Dev
+git pull --ff-only
+.\php.exe -v
+~~~
 
-## Integrity
+Because updates are appended without rewriting branch history, an existing
+clone can be advanced with a fast-forward-only pull.
 
-Downloaded source archives are verified against SHA-256
-checksums supplied by PHP.net over HTTPS.
+For production IIS deployments, do not automatically update the files used by
+an active PHP runtime. Pull or clone the new version into a staging location,
+apply the required configuration, test the application and extensions, and
+then switch the IIS/FastCGI configuration through a controlled deployment
+process with an appropriate rollback plan.
 
-This verifies consistency with PHP.net release metadata,
-but does not independently authenticate release signatures.
+## Configuration and runtime requirements
+
+PHP's Windows builds require the supported Microsoft Visual C++ Redistributable
+for Visual Studio 2015–2022. Install and maintain the x64 runtime according to
+the requirements documented on the official PHP for Windows download page.
+
+The mirrored distribution does not manage local PHP configuration. Maintain
+environment-specific files such as **php.ini**, application secrets, extension
+settings, certificates, logs, and temporary directories outside the tracked
+checkout or through a separate deployment process. Review configuration and
+extension compatibility before every PHP upgrade.
+
+## Security and limitations
+
+- Archive integrity is checked with the SHA-256 value published by PHP over
+  HTTPS. This detects corruption or a mismatch with the published artifact, but
+  it is not an independent code-signing or provenance system.
+- The repository stores complete Windows distributions as ordinary Git blobs.
+  Retaining every upgrade commit causes repository size to grow as new binary
+  versions are imported. Repository size should be monitored against GitHub's
+  repository limits and recommendations.
+- Windows executable and DLL files do not depend on Git's Unix executable bit.
+  Git records and transfers their binary contents normally.
+- The workflow validates the bundled CLI and JSON functionality. It does not
+  test a specific application, IIS configuration, third-party extension, or
+  production deployment.
+- Consumers remain responsible for PHP configuration, runtime dependencies,
+  application testing, operational rollout, and rollback procedures.
+
+## Licensing and attribution
+
+PHP and the official Windows builds are produced by the PHP project and its
+contributors. Files mirrored on the binary branches retain their upstream
+copyright notices and licensing terms. Refer to the licensing files included
+in each distribution and the [official PHP website](https://www.php.net/) for
+authoritative project information.
+
+This repository is independently operated and is not affiliated with or
+endorsed by the PHP project.
