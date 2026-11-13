@@ -1,0 +1,7 @@
+{
+  "archive": "php-8.5.12-1-Win32-vs17-x64.zip",
+  "build_variant": "TS x64",
+  "php_version": "8.5.12",
+  "sha256": "0dacd6484b092b5e9ae9fa3d7f96a937caf9d874eee2d980b68ed3129741144a",
+  "upstream_url": "https://downloads.php.net/~windows/releases/archives/php-8.5.12-1-Win32-vs17-x64.zip"
+}
