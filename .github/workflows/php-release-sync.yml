@@ -1,16 +1,9 @@
 
-name: PHP Stable Release Sync
+name: PHP Source Release Sync (disabled)
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Exact PHP version (optional, e.g. 8.5.11)"
-        required: false
-        type: string
-
-  schedule:
-    - cron: "0 3 * * *"
+# Retained for history. Source imports are disabled because this repository now
+# maintains only the two moving Windows binary branches.
+on: []
 
 permissions:
   contents: write

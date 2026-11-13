@@ -1,0 +1,50 @@
+name: PHP Windows x64 Binary Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate and prepare updates without pushing
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "17 4 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: php-windows-x64-binary-sync
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - name: Check out automation only
+        uses: actions/checkout@v4
+        with:
+          ref: automation-master
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Validate and synchronize both binary variants
+        shell: pwsh
+        env:
+          MANUAL_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          $arguments = @('scripts/sync-php-windows.py')
+          if ($env:MANUAL_DRY_RUN -eq 'true') {
+            $arguments += '--dry-run'
+          }
+          python @arguments
+
+      - name: Assert automation checkout was not modified
+        shell: pwsh
+        run: |
+          if (git status --porcelain) {
+            git status --short
+            throw 'The automation checkout was modified'
+          }
