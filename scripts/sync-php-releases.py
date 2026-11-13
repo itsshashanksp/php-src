@@ -167,6 +167,7 @@ def publish_branch(source, branch):
                 source,
                 worktree,
                 dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns(".github"),
             )
 
             git("add", "-A", cwd=worktree)
