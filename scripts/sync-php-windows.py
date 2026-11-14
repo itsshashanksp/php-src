@@ -102,7 +102,7 @@ def discover_builds() -> list[Build]:
         if not match or match.group(1) != version:
             raise ValueError(f"{variant} binary does not match stable PHP {version}")
         builds.append(Build(
-            variant, f"php-{SERIES}.X-{variant}-x64", version,
+            variant, f"php-{SERIES}.x-{variant}-x64", version,
             archive, url, checksum,
         ))
     return builds
