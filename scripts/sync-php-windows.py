@@ -276,7 +276,7 @@ def main() -> None:
     if os.name != "nt":
         raise RuntimeError("Windows x64 smoke tests require a Windows runner")
     builds = discover_builds()
-    expected = {"php-8.5.X-nts-x64", "php-8.5.X-ts-x64"}
+    expected = {"php-8.5.x-nts-x64", "php-8.5.x-ts-x64"}
     if {build.branch for build in builds} != expected:
         raise AssertionError("Unexpected target branches")
     with tempfile.TemporaryDirectory(prefix="php-windows-download-") as temp:
